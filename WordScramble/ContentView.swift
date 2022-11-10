@@ -16,32 +16,40 @@ struct ContentView: View {
     @State private var errorTitle = ""
     @State private var showingError = false
     
+    @State private var score = 0
+    
     var body: some View {
-        NavigationView {
-            List {
-                Section {
-                    TextField("Enter your word", text: $newWord)
-                        .textInputAutocapitalization(.never)
-                }
-                
-                Section {
-                    ForEach(usedWords, id: \.self) { word in
-                        HStack {
-                            Image(systemName: "\(word.count).circle.fill")
-                            Text(word)
+        VStack {
+            Text("\(score) points")
+            NavigationView {
+                List {
+                    Section {
+                        TextField("Enter your word", text: $newWord)
+                            .textInputAutocapitalization(.never)
+                    }
+                    
+                    Section {
+                        ForEach(usedWords, id: \.self) { word in
+                            HStack {
+                                Image(systemName: "\(word.count).circle.fill")
+                                Text(word)
+                            }
                         }
                     }
                 }
-            }
-            .navigationTitle(rootWord)
-            .onSubmit {
-                addNewWord()
-            }
-            .onAppear(perform: startWordGame)
-            .alert(errorTitle, isPresented: $showingError) {
-                Button("OK", role: .cancel) { }
-            } message: {
-                Text(errorMessage)
+                .navigationTitle(rootWord)
+                .onAppear(perform: startWordGame)
+                .onSubmit {
+                    addNewWord()
+                }
+                .alert(errorTitle, isPresented: $showingError) {
+                    Button("OK", role: .cancel) { }
+                } message: {
+                    Text(errorMessage)
+                }
+                .navigationBarItems(trailing: Button(action: startWordGame) {
+                    Text("New Game")
+                })
             }
         }
     }
@@ -53,22 +61,26 @@ struct ContentView: View {
         
         guard isOriginal(word: answer) else {
             wordError(title: "Word already used.", message: "Be more original")
+            score = max(0, score - 5)
             return
         }
         
         guard isReal(word: answer) else {
             wordError(title: "Word not recognized", message: "You can't just make them up, you know!")
+            score = max(0, score - 10)
             return
         }
         
         guard isPossible(word: answer) else {
             wordError(title: "Word not possible", message: "You can't spell that word from \(rootWord)!")
+            score = max(0, score - 15)
             return
         }
         
         withAnimation {
             usedWords.insert(answer, at: 0)
         }
+        score += answer.count * answer.count / 2
     }
     
     func startWordGame() {
@@ -76,6 +88,8 @@ struct ContentView: View {
             if let startWord = try? String(contentsOf: startWordsURL) {
                 let allWords = startWord.components(separatedBy: "\n")
                 rootWord = allWords.randomElement() ?? "yaboiiiiiii"
+                score = 0
+                usedWords = []
                 
                 return
             }
@@ -103,6 +117,10 @@ struct ContentView: View {
     }
     
     func isReal(word: String) -> Bool {
+        guard word.count >= 3 else {
+            return false
+        }
+        
         let checker = UITextChecker()
         let range = NSRange(location: 0, length: word.utf16.count)
         let misspelledRange = checker.rangeOfMisspelledWord(in: word, range: range, startingAt: 0, wrap: false, language: "en")
