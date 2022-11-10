@@ -8,6 +8,7 @@
 import SwiftUI
 
 struct ContentView: View {
+    // Handling words
     @State private var usedWords = [String]()
     @State private var rootWord = ""
     @State private var newWord = ""
